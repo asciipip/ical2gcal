@@ -68,10 +68,10 @@ Calendar:
 
 ## The Config File
 
-The config file is a [TOML][] config file.  All settings except
-"private\_key\_password" are mandatory.  (The password defaults to
-"notasecret", Google's default.  Unless you're being surprisingly paranoid
-with your setup, changing the password won't make things any more secure.)
+The config file is a [TOML][] config file.  The `google_calendar_id`,
+`google_client_email`, `private_key_file`, and `icalendar_feed` settings
+are mandatory; if they're not present in the config file, you need to
+provide them on the command line.
 
   [TOML]: https://github.com/toml-lang/toml
 
@@ -83,7 +83,10 @@ The settings are:
  * `private_key_file` - The file you downloaded with your service
    account's private key.
  * `private_key_password` - The password for the private key file, if you
-   changed it.
+   changed it.  If you don't provide this setting, the program will use
+   "notasecret", Google's default password.  (Unless you're being
+   surprisingly paranoid with your setup, changing the password won't make
+   things any more secure.)
  * `icalendar_feed` - The URL of the iCalendar feed to pull from.
  * `include_categories` - An array of event categories to sync.  If
    present, an event belonging to at least one of the given categories
