@@ -17,6 +17,7 @@ from oauth2client.client import SignedJwtAssertionCredentials
 
 parser = optparse.OptionParser()
 parser.add_option('-c', '--config-file')
+parser.add_option('-v', '--verbose', action='store_true')
 parser.add_option('--google-calendar-id')
 parser.add_option('--google-client-email')
 parser.add_option('--private-key-file')
@@ -78,7 +79,8 @@ for event in service.events().list(calendarId=options.google_calendar_id).execut
             # We created it, but without an iCalUID, we can't tie it to a feed
             # item.  Out it goes.
             service.events().delete(calendarId=options.google_calendar_id, eventId=event['id']).execute()
-            print 'delete:', event['start']['dateTime'], event['summary']
+            if options.verbose:
+                print 'delete:', event['start']['dateTime'], event['summary']
         else:
             old_events[event['iCalUID']] = event
 
@@ -106,17 +108,21 @@ for sc in ic.subcomponents:
             for k, v in event.iteritems():
                 if (k in old_event and old_event[k] != v) or \
                    (k not in old_event and v not in (None, '')):
-                    print '%s: "%s" != "%s"' % (k, v, old_event[k] if k in old_event else None)
+                    if options.verbose:
+                        print '%s: "%s" != "%s"' % (k, v, old_event[k] if k in old_event else None)
                     service.events().update(calendarId=options.google_calendar_id, eventId=old_event['id'], body=event).execute()
                     updated = 'updated'
                     break
-            print '%s: %s %s' % (updated, event['start']['dateTime'], event['summary'])
+            if options.verbose:
+                print '%s: %s %s' % (updated, event['start']['dateTime'], event['summary'])
         else:
             service.events().insert(calendarId=options.google_calendar_id, body=event).execute()
-            print 'added:', event['start']['dateTime'], event['summary']
+            if options.verbose:
+                print 'added:', event['start']['dateTime'], event['summary']
 
 # Everything left in old_events is not in the feed anymore.  Delete it.
 for old_event in old_events.values():
     service.events().delete(calendarId=options.google_calendar_id, eventId=old_event['id']).execute()
-    print 'delete:', old_event['start']['dateTime'], old_event['summary']
+    if options.verbose:
+        print 'delete:', old_event['start']['dateTime'], old_event['summary']
     
