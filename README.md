@@ -85,3 +85,6 @@ The settings are:
  * `private_key_password` - The password for the private key file, if you
    changed it.
  * `icalendar_feed` - The URL of the iCalendar feed to pull from.
+
+There's an example config file named `ical2gcalrc.sample` that shows the
+syntax needed.

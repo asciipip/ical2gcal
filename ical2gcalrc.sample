@@ -1,0 +1,4 @@
+google_calendar_id = "5fdsjhki234789sdfjk23478rg@group.calendar.google.com"
+google_client_email = "ical2gcal@project-id.iam.gserviceaccount.com"
+private_key_file = "secret.p12"
+icalendar_feed = "https://host/path/to/feed.ics"
