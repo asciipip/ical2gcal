@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import ConfigParser
 import apiclient
 import apiclient.discovery
 import datetime
@@ -11,6 +10,7 @@ import optparse
 import os.path
 import requests
 import sys
+import toml
 
 from oauth2client.client import SignedJwtAssertionCredentials
 
@@ -37,29 +37,32 @@ elif os.path.exists(os.path.expanduser('~/.ical2gcalrc')):
 elif os.path.exists('ical2gcalrc'):
     config_file = 'ical2gcalrc'
 
-if config_file is not None:
-    config = ConfigParser.RawConfigParser()
-    config.read(config_file)
-    try:
-        if options.google_calendar_id is None:
-            options.google_calendar_id = config.get('ical2gcal', 'google_calendar_id')
-        if options.google_client_email is None:
-            options.google_client_email = config.get('ical2gcal', 'google_client_email')
-        if options.private_key_file is None:
-            options.private_key_file = config.get('ical2gcal', 'private_key_file')
-        if options.private_key_password is None:
-            if config.has_option('ical2gcal', 'private_key_password'):
-                options.private_key_password = config.get('ical2gcal', 'private_key_password')
+def set_option(option_name, options, config, config_file, default=None):
+    if vars(options)[option_name] is None:
+        if config is None:
+            print >>sys.stderr, 'No config file was found and not all parameters were given on the command line.'
+            print >>sys.stderr, 'I can\'t work like this.'
+            exit(1)
+        if option_name in config:
+            vars(options)[option_name] = config[option_name]
+        else:
+            if default is None:
+                print >>sys.stderr, 'The config file (%s) does not have an "%s" option.' % (config_file, option_name)
+                print >>sys.stderr, '(And it wasn\'t give on the command line either.)'
+                exit(1)
             else:
-                options.private_key_password = 'notasecret'
-        if options.icalendar_feed is None:
-            options.icalendar_feed = config.get('ical2gcal', 'icalendar_feed')
-    except ConfigParser.NoSectionError:
-        print >>sys.stderr, 'The config file (%s) does not have an "ical2gcal" section.' % config_file
-        sys.exit(1)
-    except ConfigParser.NoOptionError, e:
-        print >>sys.stderr, 'The config file (%s) does not have an "%s" option (and it wasn\'t given on the command line either)' % (config_file, e.option)
-        sys.exit(1)
+                vars(options)[option_name] = default
+
+if config_file is None:
+    config = None                
+else:
+    config = toml.load(config_file)
+    
+set_option('google_calendar_id', options, config, config_file)
+set_option('google_client_email', options, config, config_file)
+set_option('private_key_file', options, config, config_file)
+set_option('private_key_password', options, config, config_file, 'notasecret')
+set_option('icalendar_feed', options, config, config_file)
 
 with open(options.private_key_file) as f:
     private_key = f.read()

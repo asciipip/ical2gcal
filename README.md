@@ -17,6 +17,7 @@ calendar in the Google Calendar interface.
  * httplib2 https://github.com/jcgregorio/httplib2
  * icalendar http://icalendar.readthedocs.org/
  * requests http://docs.python-requests.org/
+ * toml https://github.com/uiri/toml
 
 
 ## Setting Up Permissions
@@ -67,11 +68,12 @@ Calendar:
 
 ## The Config File
 
-The config file is a Windows Ini-style config file.  All settings must be
-in a section named "\[ical2gcal\]".  All settings except
+The config file is a [TOML][] config file.  All settings except
 "private\_key\_password" are mandatory.  (The password defaults to
 "notasecret", Google's default.  Unless you're being surprisingly paranoid
 with your setup, changing the password won't make things any more secure.)
+
+  [TOML]: https://github.com/toml-lang/toml
 
 The settings are:
 
