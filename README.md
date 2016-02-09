@@ -90,7 +90,7 @@ The settings are:
  * `icalendar_feed` - The URL of the iCalendar feed to pull from.
  * `include_categories` - An array of event categories to sync.  If
    present, an event belonging to at least one of the given categories
-   will be synced.  If abesent (or empty), all events will be synced.
+   will be synced.  If absent (or empty), all events will be synced.
  * `exclude_categories` - An array of categories to exclude.  If an event
    belongs to *any* of the given categories it will not be synced,
    regardless of the value of `include_categories`
