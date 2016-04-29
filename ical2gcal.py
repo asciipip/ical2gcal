@@ -91,17 +91,23 @@ http_auth = gcal_credentials.authorize(httplib2.Http())
 service = apiclient.discovery.build('calendar', 'v3', http=http_auth)
 
 old_events = {}
-for event in service.events().list(calendarId=options.google_calendar_id).execute()['items']:
-    # Ignore everything not created by this script.
-    if event['creator']['email'] == options.google_client_email:
-        if 'iCalUID' not in event:
-            # We created it, but without an iCalUID, we can't tie it to a feed
-            # item.  Out it goes.
-            service.events().delete(calendarId=options.google_calendar_id, eventId=event['id']).execute()
-            if options.verbose:
-                print 'delete:', event['start']['dateTime'], event['summary']
-        else:
-            old_events[event['iCalUID']] = event
+page_token = None
+while True:
+    events = service.events().list(calendarId=options.google_calendar_id, pageToken=page_token).execute()
+    for event in events['items']:
+        # Ignore everything not created by this script.
+        if 'creator' in event and event['creator']['email'] == options.google_client_email:
+            if 'iCalUID' not in event:
+                # We created it, but without an iCalUID, we can't tie it to a feed
+                # item.  Out it goes.
+                service.events().delete(calendarId=options.google_calendar_id, eventId=event['id']).execute()
+                if options.verbose:
+                    print 'delete:', event['start']['dateTime'], event['summary']
+            else:
+                old_events[event['iCalUID']] = event
+    page_token = events.get('nextPageToken')
+    if not page_token:
+        break
 
 r = requests.get(options.icalendar_feed)
 ic = icalendar.cal.Calendar.from_ical(r.text)
