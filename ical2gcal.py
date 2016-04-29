@@ -76,6 +76,11 @@ set_option('exclude_categories', options, config, config_file, [])
 options.include_categories = set(options.include_categories)
 options.exclude_categories = set(options.exclude_categories)
 
+# If we can't find the private key, assume it's a path relative to the
+# location of the config file.
+if not os.path.exists(options.private_key_file):
+    options.private_key_file = os.path.join(os.path.dirname(options.config_file), options.private_key_file)
+
 if OA2C_VERSION == 1:
     with open(options.private_key_file) as f:
         private_key = f.read()
