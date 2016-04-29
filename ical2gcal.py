@@ -12,7 +12,12 @@ import requests
 import sys
 import toml
 
-from oauth2client.client import SignedJwtAssertionCredentials
+try:
+    from oauth2client.service_account import ServiceAccountCredentials
+    OA2C_VERSION = 2
+except ImportError:
+    from oauth2client.client import SignedJwtAssertionCredentials
+    OA2C_VERSION = 1
 
 
 parser = optparse.OptionParser()
@@ -71,9 +76,17 @@ set_option('exclude_categories', options, config, config_file, [])
 options.include_categories = set(options.include_categories)
 options.exclude_categories = set(options.exclude_categories)
 
-with open(options.private_key_file) as f:
-    private_key = f.read()
-gcal_credentials = SignedJwtAssertionCredentials(options.google_client_email, private_key, 'https://www.googleapis.com/auth/calendar', private_key_password=options.private_key_password)
+if OA2C_VERSION == 1:
+    with open(options.private_key_file) as f:
+        private_key = f.read()
+    gcal_credentials = SignedJwtAssertionCredentials(options.google_client_email, private_key, 'https://www.googleapis.com/auth/calendar', private_key_password=options.private_key_password)
+elif OA2C_VERSION == 2:
+    try:
+        gcal_credentials = ServiceAccountCredentials.from_json_keyfile_name(options.private_key_file, 'https://www.googleapis.com/auth/calendar')
+    except ValueError:
+        gcal_credentials = ServiceAccountCredentials.from_p12_keyfile(options.google_client_email, options.private_key_file, options.private_key_password, 'https://www.googleapis.com/auth/calendar')
+else:
+    assert False, 'Unknown oauth2client version'
 http_auth = gcal_credentials.authorize(httplib2.Http())
 service = apiclient.discovery.build('calendar', 'v3', http=http_auth)
 
