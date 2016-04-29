@@ -2,6 +2,7 @@
 
 import apiclient
 import apiclient.discovery
+import codecs
 import datetime
 import httplib2
 import icalendar
@@ -19,6 +20,8 @@ except ImportError:
     from oauth2client.client import SignedJwtAssertionCredentials
     OA2C_VERSION = 1
 
+if sys.stdout.encoding is None:
+    sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
 
 parser = optparse.OptionParser()
 parser.add_option('-c', '--config-file')
