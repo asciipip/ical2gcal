@@ -34,7 +34,7 @@ parser.add_option('--exclude-category', dest='exclude_categories', action='appen
 
 config_file = None
 if options.config_file is not None:
-    if not os.file.exists(options.config_file):
+    if not os.path.exists(options.config_file):
         print >>sys.stderr, 'Config file does not exist:', options.config_file
         sys.exit(1)
     config_file = options.config_file
