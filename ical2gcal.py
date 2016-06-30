@@ -2,6 +2,7 @@
 
 import apiclient
 import apiclient.discovery
+import apiclient.errors
 import codecs
 import datetime
 import httplib2
@@ -98,66 +99,80 @@ else:
 http_auth = gcal_credentials.authorize(httplib2.Http())
 service = apiclient.discovery.build('calendar', 'v3', http=http_auth)
 
-old_events = {}
-page_token = None
-while True:
-    events = service.events().list(calendarId=options.google_calendar_id, pageToken=page_token).execute()
-    for event in events['items']:
-        # Ignore everything not created by this script.
-        if 'creator' in event and event['creator']['email'] == options.google_client_email:
-            if 'iCalUID' not in event:
-                # We created it, but without an iCalUID, we can't tie it to a feed
-                # item.  Out it goes.
-                service.events().delete(calendarId=options.google_calendar_id, eventId=event['id']).execute()
-                if options.verbose:
-                    print 'delete:', event['start']['dateTime'], event['summary']
-            else:
-                old_events[event['iCalUID']] = event
-    page_token = events.get('nextPageToken')
-    if not page_token:
-        break
-
-r = requests.get(options.icalendar_feed)
-ic = icalendar.cal.Calendar.from_ical(r.text)
-for sc in ic.subcomponents:
-    if sc.name == 'VEVENT':
-        categories = set(sc['CATEGORIES'].split(','))
-        if (len(options.include_categories) == 0 or len(categories & options.include_categories) > 0) and \
-           categories.isdisjoint(options.exclude_categories):
-            iCalUID = sc['UID']
-            event = {
-                'iCalUID': iCalUID,
-                'summary': sc['SUMMARY'],
-                'start': {'dateTime': sc['DTSTART'].dt.isoformat('T')},
-                'end': {'dateTime': sc['DTEND'].dt.isoformat('T')},
-                'location': sc['LOCATION'],
-                'description': sc['DESCRIPTION'],
-                'source': {
-                    'title': sc['SUMMARY'],
-                    'url': sc['URL'],
-                },
-            }
-            if iCalUID in old_events:
-                old_event = old_events.pop(iCalUID)
-                updated = 'no update'
-                for k, v in event.iteritems():
-                    if (k in old_event and old_event[k] != v) or \
-                       (k not in old_event and v not in (None, '')):
-                        if options.verbose:
-                            print '%s: "%s" != "%s"' % (k, v, old_event[k] if k in old_event else None)
-                        service.events().update(calendarId=options.google_calendar_id, eventId=old_event['id'], body=event).execute()
-                        updated = 'updated'
-                        break
-                if options.verbose:
-                    print '%s: %s %s' % (updated, event['start']['dateTime'], event['summary'])
-            else:
-                service.events().insert(calendarId=options.google_calendar_id, body=event).execute()
-                if options.verbose:
-                    print 'added:', event['start']['dateTime'], event['summary']
-
-# Everything left in old_events is not in the feed anymore.  Delete it.
-for old_event in old_events.values():
-    service.events().delete(calendarId=options.google_calendar_id, eventId=old_event['id']).execute()
-    if options.verbose:
-        print 'delete:', old_event['start']['dateTime'], old_event['summary']
+try:
+    old_events = {}
+    page_token = None
+    while True:
+        events = service.events().list(calendarId=options.google_calendar_id, pageToken=page_token).execute()
+        for event in events['items']:
+            # Ignore everything not created by this script.
+            if 'creator' in event and event['creator']['email'] == options.google_client_email:
+                if 'iCalUID' not in event:
+                    # We created it, but without an iCalUID, we can't tie it to a feed
+                    # item.  Out it goes.
+                    service.events().delete(calendarId=options.google_calendar_id, eventId=event['id']).execute()
+                    if options.verbose:
+                        print 'delete:', event['start']['dateTime'], event['summary']
+                else:
+                    old_events[event['iCalUID']] = event
+        page_token = events.get('nextPageToken')
+        if not page_token:
+            break
+except apiclient.errors.HttpError, e:
+    print >>sys.stderr, 'Error accessing Google Calendar API:', e
+    print >>sys.stderr, 'No events were synchronized.'
+    sys.exit(1)
     
+try:
+    r = requests.get(options.icalendar_feed)
+    ic = icalendar.cal.Calendar.from_ical(r.text)
+    for sc in ic.subcomponents:
+        if sc.name == 'VEVENT':
+            categories = set(sc['CATEGORIES'].split(','))
+            if (len(options.include_categories) == 0 or len(categories & options.include_categories) > 0) and \
+               categories.isdisjoint(options.exclude_categories):
+                iCalUID = sc['UID']
+                event = {
+                    'iCalUID': iCalUID,
+                    'summary': sc['SUMMARY'],
+                    'start': {'dateTime': sc['DTSTART'].dt.isoformat('T')},
+                    'end': {'dateTime': sc['DTEND'].dt.isoformat('T')},
+                    'location': sc['LOCATION'],
+                    'description': sc['DESCRIPTION'],
+                    'source': {
+                        'title': sc['SUMMARY'],
+                        'url': sc['URL'],
+                    },
+                }
+                if iCalUID in old_events:
+                    old_event = old_events.pop(iCalUID)
+                    updated = 'no update'
+                    for k, v in event.iteritems():
+                        if (k in old_event and old_event[k] != v) or \
+                           (k not in old_event and v not in (None, '')):
+                            if options.verbose:
+                                print '%s: "%s" != "%s"' % (k, v, old_event[k] if k in old_event else None)
+                            service.events().update(calendarId=options.google_calendar_id, eventId=old_event['id'], body=event).execute()
+                            updated = 'updated'
+                            break
+                    if options.verbose:
+                        print '%s: %s %s' % (updated, event['start']['dateTime'], event['summary'])
+                else:
+                    service.events().insert(calendarId=options.google_calendar_id, body=event).execute()
+                    if options.verbose:
+                        print 'added:', event['start']['dateTime'], event['summary']
+except apiclient.errors.HttpError, e:
+    print >>sys.stderr, 'Error accessing Google Calendar API:', e
+    print >>sys.stderr, 'Events might not have been synchronized.'
+    sys.exit(1)
+    
+try:
+    # Everything left in old_events is not in the feed anymore.  Delete it.
+    for old_event in old_events.values():
+        service.events().delete(calendarId=options.google_calendar_id, eventId=old_event['id']).execute()
+        if options.verbose:
+            print 'delete:', old_event['start']['dateTime'], old_event['summary']
+except apiclient.errors.HttpError, e:
+    print >>sys.stderr, 'Error accessing Google Calendar API:', e
+    print >>sys.stderr, 'Old events might not have been purged.'
+    sys.exit(1)
