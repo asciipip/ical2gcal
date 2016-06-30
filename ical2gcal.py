@@ -125,7 +125,11 @@ except apiclient.errors.HttpError, e:
     
 try:
     r = requests.get(options.icalendar_feed)
-    ic = icalendar.cal.Calendar.from_ical(r.text)
+    try:
+        ic = icalendar.cal.Calendar.from_ical(r.text)
+    except ValueError:
+        print >>sys.stderr, 'Unable to parse iCalendar data from feed:', options.icalendar_feed
+        sys.exit(1)
     for sc in ic.subcomponents:
         if sc.name == 'VEVENT':
             categories = set(sc['CATEGORIES'].split(','))
