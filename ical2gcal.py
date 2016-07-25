@@ -141,13 +141,14 @@ try:
                     'summary': sc['SUMMARY'],
                     'start': {'dateTime': sc['DTSTART'].dt.isoformat('T')},
                     'end': {'dateTime': sc['DTEND'].dt.isoformat('T')},
-                    'location': sc['LOCATION'],
                     'description': sc['DESCRIPTION'],
                     'source': {
                         'title': sc['SUMMARY'],
                         'url': sc['URL'],
                     },
                 }
+                if 'LOCATION' in sc:
+                    event['location'] = sc['LOCATION']
                 if iCalUID in old_events:
                     old_event = old_events.pop(iCalUID)
                     updated = 'no update'
