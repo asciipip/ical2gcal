@@ -118,6 +118,10 @@ try:
         page_token = events.get('nextPageToken')
         if not page_token:
             break
+except oauth2client.client.Error, e:
+    print >>sys.stderr, 'OAuth 2 error:', e
+    print >>sys.stderr, 'No events were synchronized.'
+    sys.exit(1)
 except apiclient.errors.HttpError, e:
     print >>sys.stderr, 'Error accessing Google Calendar API:', e
     print >>sys.stderr, 'No events were synchronized.'
@@ -166,6 +170,10 @@ try:
                     service.events().insert(calendarId=options.google_calendar_id, body=event).execute()
                     if options.verbose:
                         print 'added:', event['start']['dateTime'], event['summary']
+except oauth2client.client.Error, e:
+    print >>sys.stderr, 'OAuth 2 error:', e
+    print >>sys.stderr, 'Events might not have been synchronized.'
+    sys.exit(1)
 except apiclient.errors.HttpError, e:
     print >>sys.stderr, 'Error accessing Google Calendar API:', e
     print >>sys.stderr, 'Events might not have been synchronized.'
@@ -177,6 +185,10 @@ try:
         service.events().delete(calendarId=options.google_calendar_id, eventId=old_event['id']).execute()
         if options.verbose:
             print 'delete:', old_event['start']['dateTime'], old_event['summary']
+except oauth2client.client.Error, e:
+    print >>sys.stderr, 'OAuth 2 error:', e
+    print >>sys.stderr, 'Old events might not have been purged.'
+    sys.exit(1)
 except apiclient.errors.HttpError, e:
     print >>sys.stderr, 'Error accessing Google Calendar API:', e
     print >>sys.stderr, 'Old events might not have been purged.'
